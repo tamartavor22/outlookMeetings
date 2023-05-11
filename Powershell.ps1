@@ -300,7 +300,7 @@ $allFreeTime = Get-AllFreeTime
 Write-Host $allFreeTime
 $allFreeTimeStr = $($allFreeTime | ConvertTo-Json)
 $full_html = $my_html1 + $allFreeTimeStr + $my_html2
-#$full_html > "C:\Users\Tamar\OutlookEventsTest.html"
-Out-File -FilePath "C:\Users\Tamar\OutlookEventsTest.html" -Force -InputObject $full_html -Encoding UTF8
+#$full_html > "C:\Users\noata\Downloads\OutlookEventsTest.html"
+Out-File -FilePath "C:\Users\noata\Downloads\OutlookEventsTest.html" -Force -InputObject $full_html -Encoding UTF8
 Write-Host "Finished running :)"
-& 'C:\Program Files\Google\Chrome\Application\chrome.exe' 'C:\Users\tamar\OutlookEventsTest.html'
+& 'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe' 'C:\Users\noata\Downloads\OutlookEventsTest.html'
