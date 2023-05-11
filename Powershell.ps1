@@ -1,15 +1,41 @@
-Param(
-    [Parameter(Mandatory, HelpMessage = "Please input a start date like this: dd/mm/yyyy")] [string]$StartDate,
-    [Parameter(Mandatory, HelpMessage = "Please input an end date like this: dd/mm/yyyy")] [string]$EndDate
-)
+#Param(
+ #   [Parameter(Mandatory, HelpMessage = "Please input a start date like this: dd/mm/yyyy")] [string]$StartDate,
+  #  [Parameter(Mandatory, HelpMessage = "Please input an end date like this: dd/mm/yyyy")] [string]$EndDate
+#)
 
 Function Get-DiunimDate ($mapi)
 # Gets dates of diunim days
 {
 #the below code doesnt give me recurring events. only the first of them...
-$DiunimFilter = "[MessageClass]='IPM.Appointment' AND [Subject] = 'מוקד המשכים' AND [AllDayEvent] = 'true'"
-$Appointments = ($mapi.GetDefaultFolder(9).Items).restrict($DiunimFilter)
-$Appointments = $Appointments | select start
+$DiunimFilter = "[MessageClass]='IPM.Appointment' AND [Subject] = 'מוקד המשכים' AND [AllDayEvent] = 'true' AND [Start] > '1/5/2023' AND [End] < '1/7/2023'"
+
+$Appointments = $mapi.GetDefaultFolder(9).Items
+$Appointments.IncludeRecurrences = $true
+$Appointments.Restrict($DiunimFilter) |  ForEach-Object {
+
+if ($_.IsRecurring -ne $true) {
+$_.Start
+} else {
+$recAppointment = $_
+$pattern = $recAppointment.GetRecurrencePattern()
+$recEnd = Get-Date "2023-07-01"
+$date = Get-Date "2023-05-01"
+
+while ($date -le $recEnd){
+
+try {
+$occurance = $pattern.GetOccurrence($date)
+$occurance.start
+
+}
+catch {
+}
+$date = $date.AddDays(1)
+
+}
+
+}}
+
 #the below code works good as a filter
 $Appointments.start -gt $StartDate -lt $EndDate
 }
@@ -72,6 +98,7 @@ Function Get-AllFreeTime
     $outlook=New-Object -com outlook.application
     $mapi=$outlook.GetNamespace("MAPI")
     $relevantDates = Get-DiunimDate($mapi)
+    Write-Host "in get all free time"
     Write-Host $relevantDates
 
     if ($relevantDates.length -eq 0) {
