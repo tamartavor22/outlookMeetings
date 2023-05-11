@@ -6,10 +6,12 @@ Param(
 Function Get-DiunimDate ($mapi)
 # Gets dates of diunim days
 {
-$DiunimFilter = "[MessageClass]='IPM.Appointment' AND [Start] > '$StartDate'  AND [Start] < '$EndDate' AND [isrecurring] = 'False' AND [Subject] = 'דיונים' AND [AllDayEvent] = 'true'"
+#the below code doesnt give me recurring events. only the first of them...
+$DiunimFilter = "[MessageClass]='IPM.Appointment' AND [Subject] = 'מוקד המשכים' AND [AllDayEvent] = 'true'"
 $Appointments = ($mapi.GetDefaultFolder(9).Items).restrict($DiunimFilter)
 $Appointments = $Appointments | select start
-$Appointments.start
+#the below code works good as a filter
+$Appointments.start -gt $StartDate -lt $EndDate
 }
 
 Function Get-Events($relevantDate, $mapi)
@@ -22,6 +24,7 @@ Function Get-Events($relevantDate, $mapi)
     $events = ($mapi.GetDefaultFolder(9).Items).restrict($eventsFilter)
 
     $events | select start, end, subject
+    Write-Host $events
    
 }
 
@@ -69,6 +72,8 @@ Function Get-AllFreeTime
     $outlook=New-Object -com outlook.application
     $mapi=$outlook.GetNamespace("MAPI")
     $relevantDates = Get-DiunimDate($mapi)
+    Write-Host $relevantDates
+
     if ($relevantDates.length -eq 0) {
         Write-Host "No Diunim Dates In Selected Interval... :( Love You Mom"
     }
@@ -292,6 +297,7 @@ $my_html2 = @'
 
 
 $allFreeTime = Get-AllFreeTime
+Write-Host $allFreeTime
 $allFreeTimeStr = $($allFreeTime | ConvertTo-Json)
 $full_html = $my_html1 + $allFreeTimeStr + $my_html2
 #$full_html > "C:\Users\Tamar\OutlookEventsTest.html"
