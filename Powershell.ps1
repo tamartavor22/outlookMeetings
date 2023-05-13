@@ -1,57 +1,63 @@
-#Param(
- #   [Parameter(Mandatory, HelpMessage = "Please input a start date like this: dd/mm/yyyy")] [string]$StartDate,
-  #  [Parameter(Mandatory, HelpMessage = "Please input an end date like this: dd/mm/yyyy")] [string]$EndDate
-#)
+Param(
+  [Parameter(Mandatory, HelpMessage = "Please input a start date like this: dd/mm/yyyy")] [string]$StartDate,
+  [Parameter(Mandatory, HelpMessage = "Please input an end date like this: dd/mm/yyyy")] [string]$EndDate
+)
 
 Function Get-DiunimDate ($mapi)
 # Gets dates of diunim days
 {
-#the below code doesnt give me recurring events. only the first of them...
-$DiunimFilter = "[MessageClass]='IPM.Appointment' AND [Subject] = 'מוקד המשכים' AND [AllDayEvent] = 'true' AND [Start] > '1/5/2023' AND [End] < '1/7/2023'"
 
+#the below code doesnt give me recurring events. only the first of them...
+$DiunimFilter = "[MessageClass]='IPM.Appointment' AND [Subject] = 'מוקד המשכים' AND [AllDayEvent] = 'true' AND [Start] > '$StartDate' AND [End] < '$EndDate'"
 $Appointments = $mapi.GetDefaultFolder(9).Items
 $Appointments.IncludeRecurrences = $true
+$results = @()
 $Appointments.Restrict($DiunimFilter) |  ForEach-Object {
-
 if ($_.IsRecurring -ne $true) {
-$_.Start
+$results += $_.Start
 } else {
 $recAppointment = $_
 $pattern = $recAppointment.GetRecurrencePattern()
-$recEnd = Get-Date "2023-07-01"
-$date = Get-Date "2023-05-01"
+$recEnd = [DateTime]::ParseExact($EndDate, "dd/MM/yyyy", $null)
+$date = [DateTime]::ParseExact($StartDate, "dd/MM/yyyy", $null)
 
 while ($date -le $recEnd){
-
 try {
 $occurance = $pattern.GetOccurrence($date)
-$occurance.start
-
+$results += $occurance.start
 }
-catch {
-}
+catch {}
 $date = $date.AddDays(1)
-
 }
-
 }}
-
-#the below code works good as a filter
-$Appointments.start -gt $StartDate -lt $EndDate
+Write-Host out of if else $results
+$results
 }
 
 Function Get-Events($relevantDate, $mapi)
 # finds all events on a diun day
 {
-    $diunimDate = $relevantDate.AddDays(-1).toString('d/M/yyyy')
-    $diunimendate = $relevantDate.AddDays(1).toString('d/M/yyyy')
 
-    $eventsFilter = "[MessageClass]='IPM.Appointment' AND [Start] > '$diunimDate'  AND [Start] < '$diunimendate' AND [isrecurring] = 'False' AND [AllDayEvent] = 'false'"
-    $events = ($mapi.GetDefaultFolder(9).Items).restrict($eventsFilter)
+    # Create a new Outlook.Application object
+    $Outlook = New-Object -ComObject Outlook.Application
 
-    $events | select start, end, subject
-    Write-Host $events
-   
+    # Get the default Calendar folder
+    $Calendar = $Outlook.Session.GetDefaultFolder(9)
+
+    # Get the start and end times for the given date
+    $Start = $relevantDate.Date.toString('d/M/yyyy')
+    $Start += " 00:00"
+    $End = $relevantDate.Date.toString('d/M/yyyy')
+    $End += " 23:59"
+    # Set up a filter to get all events that start and end within the given date
+    $Filter = "[Start] >= '$Start' AND [Start] < '$End' AND [AllDayEvent] = '$false' AND [isrecurring] = 'False'"
+
+    # Use the filter to get all events in the Calendar folder that match the criteria
+    $Events = $Calendar.Items.Restrict($Filter)
+
+    # Output the events to the console
+    $Events | Select-Object -Property Start, End
+
 }
 
 Function Get-WorkingHoursInDate ($relevantDate)
@@ -200,7 +206,7 @@ $my_html2 = @'
 
 
       function dateToString(date) {
-        const dateStr = `${date.getDate()}/${date.getMonth()}/${date.getYear()}`;
+        const dateStr = `${date.getDate()}/${date.getMonth() + 1}/${date.getYear() + 1900}`;
         const timeStr = `${date.getHours()}:${String(
           date.getMinutes()
         ).padStart(2, "0")}`;
@@ -245,6 +251,7 @@ $my_html2 = @'
           tableContent += `<td><ul id=${newEventDateStr}><li style='margin-bottom: 8px'>${newEventDateStr}</li><li class='hours'>${newEventTimeStr}</li>`;
           currentEventDate = newEventDate;
           currentEventDayOfWeek = newEventDayOfWeek;
+ continue;
         }
 
         // if between 2 following meetings the week ended:
@@ -324,9 +331,12 @@ $my_html2 = @'
 
 
 $allFreeTime = Get-AllFreeTime
-Write-Host $allFreeTime
+Write-Host ALL FREE TIME: $allFreeTime
 $allFreeTimeStr = $($allFreeTime | ConvertTo-Json)
+Write-Host ALL FREE TIME STR JSON: $allFreeTimeStr
+
 $full_html = $my_html1 + $allFreeTimeStr + $my_html2
+
 #$full_html > "C:\Users\noata\Downloads\OutlookEventsTest.html"
 Out-File -FilePath "C:\Users\noata\Downloads\OutlookEventsTest.html" -Force -InputObject $full_html -Encoding UTF8
 Write-Host "Finished running :)"
